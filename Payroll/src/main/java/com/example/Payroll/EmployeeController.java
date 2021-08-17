@@ -1,11 +1,11 @@
 package com.example.Payroll;
 
-import org.hibernate.EntityMode;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.hateoas.EntityModel;
 
-import javax.swing.text.html.parser.Entity;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,13 +42,17 @@ public class EmployeeController {
     }
 
     @PostMapping("/employees")
-    Employee newEmployee(@RequestBody Employee employee) {
-        return repository.save(employee);
+    ResponseEntity<?> newEmployee(@RequestBody Employee employee) {
+        EntityModel<Employee> entity = assembler.toModel(repository.save(employee));
+
+        return ResponseEntity
+                .created(entity.getRequiredLink(IanaLinkRelations.SELF).toUri())
+                .body(entity);
     }
 
     @PutMapping("/employees/{id}")
-    Employee replaceEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
-        return repository.findById(id)
+    ResponseEntity<?> replaceEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
+        Employee findedEmployee = repository.findById(id)
                 .map(employee -> {
                         employee.setName(newEmployee.getName());
                         employee.setRole(newEmployee.getRole());
@@ -58,10 +62,18 @@ public class EmployeeController {
                     newEmployee.setId(id);
                     return repository.save(newEmployee);
                 });
+
+        EntityModel<Employee> entity = assembler.toModel(findedEmployee);
+
+        return ResponseEntity
+                .created(entity.getRequiredLink(IanaLinkRelations.SELF).toUri())
+                .body(entity);
+
     }
 
     @DeleteMapping("/employees/{id}")
-    void deleteEmployee(@PathVariable Long id) {
+    ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
